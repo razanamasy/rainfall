@@ -1,0 +1,35 @@
+level8 : 
+Le programme affiche les adresses de auth et service : (nil) (nil)
+puis un fget → local_90 sur le stream STDIN : plusieurs possibilités : auth, service, reset et login
+
+Si l'entrée est login login il check le 32ème char de auth si il n’est pas null alors il exécute bash.
+
+Si l'entrée du get est “auth “ il récupère les caractères d'après “auth “ et les remet dans auth.
+
+On pourrait donc mettre 32 caractères après auth. Le problème est qu’il ne rentre pas dans le strcpy si le nombre de caractère copie est supérieur à 29 char
+
+chaque address allouée sur la heap sont séparés de 16 bytes
+
+Pour écrire sur le byte à partir de auth on utilise le strdup appelé par l'entrée “service”. 
+soit, on écrit service une fois et on remplit par 16 char minimum (16 byte de décalage d’address + 16 byte d'écriture)
+soit un alloue service 2 fois donc 2 * 16 byte de décalage depuis l'adresse de auth. le 32ème byte sera alloué avec le deuxième strdup (service)
+
+donc on alloue auth 1 fois sur la heap puis service + 16 char ou service 2 fois, puis on appel login
+
+“auth “
+“service1234567891234567”
+“login”
+“cat /home/user/level9/.pass”
+
+OU
+
+“auth ”
+“service”
+“service”
+“login”
+“cat /home/user/level9/.pass”
+
+
+
+c542e581c5ba5162a85f767996e3247ed619ef6c6f7b76a59435545dc6259f8a
+

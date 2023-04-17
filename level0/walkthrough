@@ -1,0 +1,15 @@
+Level0 : 1fe8a524fa4bec01ca4ea2a869af2a02260d4a7d5fe7e7c24d8617e6dca12d3a
+
+gdb --args level0 *number*
+a la ligne cmp main 25 : comparaison value dans eax avec $0x1a7
+info register eax puis x/s de la value, on trouve bien notre nombre
+0x1a7 = 423 en hexadecimal
+donc le code compare notre argument number avec 423.
+
+on execute ./level0 423
+Le reste du code getegid geteuid et setresgid avant de exec /bin/bash → donc on a les droit car le programme tourne encore.
+
+il suffit ensuite de “cat /home/user/level1/.pass” dans bash 
+
+on a le pass suivant : 1fe8a524fa4bec01ca4ea2a869af2a02260d4a7d5fe7e7c24d8617e6dca12d3a
+

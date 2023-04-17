@@ -1,0 +1,18 @@
+Bonus3:
+
+Si le fichier pass n’a pas été ouvert OU qu’il n’y a pas qu’un paramètre le programme va return et rien faire.
+if ((local_14 == (FILE *)0x0) || (param_1 != 2))
+
+sinon il rentre dans un condition puis, si iVar2 est null on exécute bash. iVar2 est le resultat de la comparaison entre notre arg et local_98 dans lequel est contenu le contenu du pass.
+memcmp : 
+Trois cas distincts doivent être considérés. Soit les deux chaînes sont égales : dans ce cas, une valeur nulle sera retournée. Soit la première chaîne est plus petite que la seconde (dans l'ordre lexicographique) : dans ce cas, une valeur négative sera retournée. Soit la première chaîne est plus grande que la seconde : dans ce dernier cas, une valeur positive sera renvoyée. Dans tous les cas, la valeur absolue indiquera la position du premier caractère permettant de produire le résultat.
+
+iVar2 = strcmp((char *)local_98,*(char **)(param_2 + 4));
+if (iVar2 == 0) {
+	execl("/bin/sh","sh",0);
+}
+
+donc si on strcmp avec “” ivar2 sera egal a 0
+
+./bonus3 “”
+

